@@ -10,23 +10,29 @@ const ignoreWrapperList = [
 let focusedIndex = 0;
 let focusTargetList: HTMLAnchorElement[] = [];
 
-export const setupFocusTarget = () => {
+export const setupFocusTarget = (seeMore = false) => {
   const style = document.createElement("style");
   document.body.appendChild(style);
 
-  focusTargetList = getLinks();
+  focusTargetList = getLinks(seeMore);
   focusTargetList.forEach((el) => {
     el.setAttribute("data-gsrks-anchor", "");
   });
 };
 
-const getLinks = (): HTMLAnchorElement[] => {
+const getLinks = (seeMore: boolean): HTMLAnchorElement[] => {
   const selectorList = ["g-link > a:first-of-type", "a > h3"];
 
   // get elements both of g-link and h3 for keep order
   const gLinkAndH3List = Array.from(
     document.querySelectorAll(
       selectorList.map((selector) => `#search ${selector}`).join(`,`)
+    )
+  );
+
+  const additionalH3List = Array.from(
+    document.querySelectorAll(
+      selectorList.map((selector) => `#botstuff ${selector}`).join(`,`)
     )
   );
 
@@ -42,8 +48,24 @@ const getLinks = (): HTMLAnchorElement[] => {
     )
   );
 
+  const ignoreAdditionalElementList = Array.from(
+    document.querySelectorAll(
+      ignoreWrapperList
+        .map((wrapper) =>
+          selectorList
+            .map((selector) => `#botstuff ${wrapper} ${selector}`)
+            .join(`,`)
+        )
+        .join(`,`)
+    )
+  );
+
   const filteredElementList = gLinkAndH3List.filter(
     (el) => !ignoreElementList.includes(el)
+  );
+
+  const filteredAdditionalElementList = additionalH3List.filter(
+    (el) => !ignoreAdditionalElementList.includes(el)
   );
 
   // extract anchor elements
@@ -63,7 +85,32 @@ const getLinks = (): HTMLAnchorElement[] => {
     []
   );
 
-  return anchorList as HTMLAnchorElement[];
+  const additionalAnchorList = filteredAdditionalElementList.reduce(
+    (acc: HTMLAnchorElement[], el) => {
+      if (el.tagName === "H3") {
+        // a > h3 -> a
+        acc.push(el.parentElement as HTMLAnchorElement);
+      } else {
+        // g-link > a
+        if (el.children.length === 0) {
+          acc.push(el as HTMLAnchorElement);
+        }
+      }
+      return acc;
+    },
+    []
+  );
+
+  let concatedAnchorList = anchorList.concat(additionalAnchorList);
+  if (!seeMore) {
+    // ignore See more links
+    concatedAnchorList = concatedAnchorList.slice(0, -2);
+  } else {
+    // ignore a link
+    concatedAnchorList = concatedAnchorList.slice(0, -1);
+  }
+
+  return concatedAnchorList as HTMLAnchorElement[];
 };
 
 const getNextPageLink = (): HTMLAnchorElement | null => {
@@ -74,8 +121,18 @@ const getPrevPageLink = (): HTMLAnchorElement | null => {
 };
 
 const focusItem = (index: number) => {
-  const inRange = index >= 0 && index < focusTargetList.length;
-  if (!inRange) return false;
+  const Negative = index < 0;
+  if (Negative) return false;
+
+  if (index >= focusTargetList.length) {
+    setupFocusTarget();
+    if (index >= focusTargetList.length) {
+      setupFocusTarget(true);
+      if (index >= focusTargetList.length) {
+        return false;
+      }
+    }
+  }
 
   focusedIndex = index;
   const target = focusTargetList[focusedIndex];

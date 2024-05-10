@@ -10,17 +10,17 @@ const ignoreWrapperList = [
 let focusedIndex = 0;
 let focusTargetList: HTMLAnchorElement[] = [];
 
-export const setupFocusTarget = (seeMore = false) => {
+export const setupFocusTarget = () => {
   const style = document.createElement("style");
   document.body.appendChild(style);
 
-  focusTargetList = getLinks(seeMore);
+  focusTargetList = getLinks();
   focusTargetList.forEach((el) => {
     el.setAttribute("data-gsrks-anchor", "");
   });
 };
 
-const getLinks = (seeMore: boolean): HTMLAnchorElement[] => {
+const getLinks = (): HTMLAnchorElement[] => {
   const selectorList = ["g-link > a:first-of-type", "a > h3"];
 
   // get elements both of g-link and h3 for keep order
@@ -102,13 +102,7 @@ const getLinks = (seeMore: boolean): HTMLAnchorElement[] => {
   );
 
   let concatedAnchorList = anchorList.concat(additionalAnchorList);
-  if (!seeMore) {
-    // ignore See more links
-    concatedAnchorList = concatedAnchorList.slice(0, -2);
-  } else {
-    // ignore a link
-    concatedAnchorList = concatedAnchorList.slice(0, -1);
-  }
+  concatedAnchorList = concatedAnchorList.slice(0, -2);
 
   return concatedAnchorList as HTMLAnchorElement[];
 };
@@ -127,10 +121,7 @@ const focusItem = (index: number) => {
   if (index >= focusTargetList.length) {
     setupFocusTarget();
     if (index >= focusTargetList.length) {
-      setupFocusTarget(true);
-      if (index >= focusTargetList.length) {
-        return false;
-      }
+      return false;
     }
   }
 

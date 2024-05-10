@@ -30,6 +30,12 @@ const getLinks = (): HTMLAnchorElement[] => {
     )
   );
 
+  const additionalH3List = Array.from(
+    document.querySelectorAll(
+      selectorList.map((selector) => `#botstuff ${selector}`).join(`,`)
+    )
+  );
+
   const ignoreElementList = Array.from(
     document.querySelectorAll(
       ignoreWrapperList
@@ -42,8 +48,24 @@ const getLinks = (): HTMLAnchorElement[] => {
     )
   );
 
+  const ignoreAdditionalElementList = Array.from(
+    document.querySelectorAll(
+      ignoreWrapperList
+        .map((wrapper) =>
+          selectorList
+            .map((selector) => `#botstuff ${wrapper} ${selector}`)
+            .join(`,`)
+        )
+        .join(`,`)
+    )
+  );
+
   const filteredElementList = gLinkAndH3List.filter(
     (el) => !ignoreElementList.includes(el)
+  );
+
+  const filteredAdditionalElementList = additionalH3List.filter(
+    (el) => !ignoreAdditionalElementList.includes(el)
   );
 
   // extract anchor elements
@@ -63,7 +85,27 @@ const getLinks = (): HTMLAnchorElement[] => {
     []
   );
 
-  return anchorList as HTMLAnchorElement[];
+  const additionalAnchorList = filteredAdditionalElementList.reduce(
+    (acc: HTMLAnchorElement[], el) => {
+      if (el.tagName === "H3") {
+        // a > h3 -> a
+        acc.push(el.parentElement as HTMLAnchorElement);
+      } else {
+        // g-link > a
+        if (el.children.length === 0) {
+          acc.push(el as HTMLAnchorElement);
+        }
+      }
+      return acc;
+    },
+    []
+  );
+
+  let concatedAnchorList = anchorList.concat(additionalAnchorList);
+  // ignore See More Links
+  concatedAnchorList = concatedAnchorList.slice(0, -2);
+
+  return concatedAnchorList as HTMLAnchorElement[];
 };
 
 const getNextPageLink = (): HTMLAnchorElement | null => {
@@ -74,8 +116,15 @@ const getPrevPageLink = (): HTMLAnchorElement | null => {
 };
 
 const focusItem = (index: number) => {
-  const inRange = index >= 0 && index < focusTargetList.length;
-  if (!inRange) return false;
+  const Negative = index < 0;
+  if (Negative) return false;
+
+  if (index >= focusTargetList.length) {
+    setupFocusTarget();
+    if (index >= focusTargetList.length) {
+      return false;
+    }
+  }
 
   focusedIndex = index;
   const target = focusTargetList[focusedIndex];
